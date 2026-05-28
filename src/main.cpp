@@ -9,6 +9,7 @@
 
 #define BLOCK_SIZE 32.0f
 #define SPEED BLOCK_SIZE * 8
+#define COLLISION_RANGE 4
 
 float floatSign(float x) {
 	if (x > 0) return 1.0f;
@@ -29,17 +30,7 @@ struct Body {
 		position.x += velocity.x * dt;
 		position.y += velocity.y * dt;
 
-		const float drag = SPEED * 0.5f;
-		
-		/*
-		TODO: I have to uh... deal with friction and directions and stuff i hate this man lowkey...
-
-		But the gist of it. drag currently happens if you dont move no matter the direction
-		Thus Drag has to happen if its the same direction as the player is moving or something...
-		maybe enum
-
-		Time to sleep!
-		*/
+		const float drag = SPEED * 0.5f;		
 
 		velocity.x -= drag * floatSign(velocity.x) * dt;
 		velocity.y -= drag * floatSign(velocity.y) * dt;
@@ -68,6 +59,7 @@ void MapDraw(Map &map) {
 			if (map[y][x] != 0) {
 				Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
 				DrawRectanglePro(blockRect, { 0, 0 }, 0, PURPLE);
+				DrawRectangleLinesEx(blockRect, 1, BLACK);
 			}
 		}
 	}
@@ -79,9 +71,21 @@ void MapBlockCollide(Map &map, Body &player, double dt) {
 		Especially if i want to store the entire map in one 2d array
 	*/
 
+	// Realistically we probobly only need to check like a 5x5 around teh player
+
+
+	// Safety checks
+	u64 xToIndex = player.position.x / BLOCK_SIZE;
+	u64 yToIndex = player.position.y / BLOCK_SIZE;
+	u64 x0 = std::max(xToIndex - COLLISION_RANGE, u64(0));
+	u64 x1 = std::min(xToIndex + COLLISION_RANGE, map[0].size());
+	u64 y0 = std::max(yToIndex - COLLISION_RANGE, u64(0));
+	u64 y1 = std::min(yToIndex + COLLISION_RANGE, map.size());
+
 	Rectangle playerRect = {player.position.x, player.position.y, player.size.x, player.size.y};
-	for (u64 y = 0; y < map.size(); y++) {
-		for (u64 x = 0; x < map[y].size(); x++) {
+	
+	for (u64 y = y0; y < y1; y++) {
+		for (u64 x = x0; x < x1; x++) {
 			if (map[y][x] == 0) continue;
 			
 			Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
@@ -103,8 +107,8 @@ void MapBlockCollide(Map &map, Body &player, double dt) {
 		}
 	}
 
-	for (u64 y = 0; y < map.size(); y++) {
-		for (u64 x = 0; x < map[y].size(); x++) {
+	for (u64 y = y0; y < y1; y++) {
+		for (u64 x = x0; x < x1; x++) {
 			if (map[y][x] == 0) continue;
 			
 			Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
