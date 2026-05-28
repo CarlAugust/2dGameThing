@@ -8,7 +8,7 @@
 #include <algorithm>
 
 #define BLOCK_SIZE 32.0f
-#define SPEED BLOCK_SIZE * 2
+#define SPEED BLOCK_SIZE * 8
 
 float floatSign(float x) {
 	if (x > 0) return 1.0f;
@@ -91,7 +91,6 @@ void MapCollide(Map &map, Body &player, double dt) {
 			playerRectTemp.x += player.velocity.x * dt;
 			bool collideX = CheckCollisionRecs(blockRect, playerRectTemp);
 			if (collideX) {
-				DrawRectanglePro(blockRect, { 0, 0 }, 0, PURPLE);
 				playerRectTemp.x -= player.velocity.x * dt;
 				if (player.velocity.x < 0.0f) {
 					player.position.x = blockRect.x + blockRect.width;
@@ -115,7 +114,6 @@ void MapCollide(Map &map, Body &player, double dt) {
 			playerRectTemp.y += player.velocity.y * dt;
 			bool collideY = CheckCollisionRecs(blockRect, playerRectTemp);
 			if (collideY) {
-				DrawRectanglePro(blockRect, { 0, 0 }, 0, PURPLE);
 				playerRectTemp.y -= player.velocity.y * dt;
 				if (player.velocity.y < 0.0f) {
 					player.position.y = blockRect.y + blockRect.height;
@@ -132,38 +130,61 @@ void MapCollide(Map &map, Body &player, double dt) {
 
 int main()
 {
+	// INITILIZATION ----------------------------------------------------
+
 	const int screenWidth = 1600;
 	const int screenHeight = 900;
 	InitWindow(screenWidth, screenHeight, "2dGameThing");
-	SetTargetFPS(60);
+	SetTargetFPS(144);
+
 	Body player;
 	player.position = { screenWidth / 2.0f, screenHeight / 2.0f };
 	player.prevPosition = player.position;
 	player.size = { BLOCK_SIZE, BLOCK_SIZE };
 
-	std::vector<std::vector<int>> map = {
-		{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-		{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-		{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-		{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-		{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-		{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
-	};
+	const int mapWidth = (screenWidth * 4) / BLOCK_SIZE;
+	const int mapHeight = (screenHeight * 2) / BLOCK_SIZE;
+
+	std::vector<std::vector<int>> map(mapHeight, std::vector<int>(mapWidth, 0));
+	for (int i = 10; i < 20; i++) {
+		for (int j = 10; j < 20; j++) {
+			map[i][j] = 1;
+		}
+	}
+
+	Camera2D camera;
+	camera.target = { player.position.x + player.size.x / 2, player.position.y + player.size.y / 2 };
+	camera.offset = { screenWidth / 2, screenHeight / 2 };
+	camera.rotation = 0.0f;
+	camera.zoom = 1.0f;
+
+	// MAIN LOOP ----------------------------------------------------
 
 	while (!WindowShouldClose())
 	{
 		double dt = GetFrameTime();
 
+		// GAME EVENTS
+
 		HandleInput(player, dt);
 		MapCollide(map, player, dt);
-		player.UpdatePosition(dt);	
-	
-		BeginDrawing();
-		ClearBackground(RAYWHITE);
-		DrawFPS(screenWidth - 100, 10);
+		player.UpdatePosition(dt);		
+		camera.target = { player.position.x + player.size.x / 2, player.position.y + player.size.y / 2 };
+		
+		// DRAWING ---
 
-		DrawRectangleV(player.position, player.size, RED);
-		MapDraw(map);
+		BeginDrawing();
+
+		ClearBackground(RAYWHITE);
+
+		BeginMode2D(camera);
+		{
+			DrawRectangleV(player.position, player.size, RED);			
+			MapDraw(map);
+		}
+		EndMode2D();
+
+		DrawFPS(screenWidth - 100, 10);
 
 		EndDrawing();
 	}
