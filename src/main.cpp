@@ -73,7 +73,7 @@ void MapDraw(Map &map) {
 	}
 }
 
-void MapCollide(Map &map, Body &player, double dt) {
+void MapBlockCollide(Map &map, Body &player, double dt) {
 	/*
 		TODO: When map size increases i should make the loop only work for elements around the player
 		Especially if i want to store the entire map in one 2d array
@@ -128,12 +128,60 @@ void MapCollide(Map &map, Body &player, double dt) {
 	}
 }
 
+void MapBorderCollide(Body& player, const u64 mapWidthReal, const u64 mapHeightReal, double dt) {
+	const float mapWidthFloat = float(mapWidthReal);
+	const float mapHeightFloat = float(mapHeightReal);
+
+	if (player.position.x + player.velocity.x * dt < 0.0f) {
+		player.position.x = 0.0f;
+		player.velocity.x = 0.0f;
+	}
+	else if (player.position.x + player.size.x + player.velocity.x * dt > mapWidthFloat) {
+		player.position.x = mapWidthFloat - player.size.x;
+		player.velocity.x = 0.0f;
+	}
+
+	if (player.position.y + player.velocity.y * dt < 0.0f) {
+		player.position.y = 0.0f;
+		player.velocity.y = 0.0f;
+	}
+	else if (player.position.y + player.size.y + player.velocity.y * dt > mapHeightFloat) {
+		player.position.y = mapHeightFloat - player.size.y;
+		player.velocity.y = 0.0f;
+	}
+}
+
+void UpdatePlayerCamera(Camera2D& camera, Body& player, const u64 mapWidthReal, const u64 mapHeightReal) {
+	const float mapWidthFloat = float(mapWidthReal);
+	const float mapHeightFloat = float(mapHeightReal);
+	
+	if (player.position.x - camera.offset.x < 0) {
+		camera.target.x = camera.offset.x;
+	}
+	else if (player.position.x + camera.offset.x > mapWidthFloat) {
+		camera.target.x = mapWidthFloat - camera.offset.x;
+	}
+	else {
+		camera.target.x = player.position.x;
+	}
+
+	if (player.position.y - camera.offset.y < 0) {
+		camera.target.y = camera.offset.y;
+	}
+	else if (player.position.y + camera.offset.y > mapHeightFloat) {
+		camera.target.y = mapHeightFloat - camera.offset.y;
+	}
+	else {
+		camera.target.y = player.position.y;
+	}
+}
+
 int main()
 {
 	// INITILIZATION ----------------------------------------------------
 
-	const int screenWidth = 1600;
-	const int screenHeight = 900;
+	const u64 screenWidth = 1600;
+	const u64 screenHeight = 900;
 	InitWindow(screenWidth, screenHeight, "2dGameThing");
 	SetTargetFPS(144);
 
@@ -142,10 +190,10 @@ int main()
 	player.prevPosition = player.position;
 	player.size = { BLOCK_SIZE, BLOCK_SIZE };
 
-	const int mapWidth = (screenWidth * 4) / BLOCK_SIZE;
-	const int mapHeight = (screenHeight * 2) / BLOCK_SIZE;
+	const u64 mapWidthReal = (screenWidth * 4);
+	const u64 mapHeightReal = (screenHeight * 2);
 
-	std::vector<std::vector<int>> map(mapHeight, std::vector<int>(mapWidth, 0));
+	std::vector<std::vector<int>> map(mapHeightReal / BLOCK_SIZE, std::vector<int>(mapWidthReal / BLOCK_SIZE, 0));
 	for (int i = 10; i < 20; i++) {
 		for (int j = 10; j < 20; j++) {
 			map[i][j] = 1;
@@ -167,9 +215,11 @@ int main()
 		// GAME EVENTS
 
 		HandleInput(player, dt);
-		MapCollide(map, player, dt);
+		MapBlockCollide(map, player, dt);
+		MapBorderCollide(player, mapWidthReal, mapHeightReal, dt);
 		player.UpdatePosition(dt);		
-		camera.target = { player.position.x + player.size.x / 2, player.position.y + player.size.y / 2 };
+
+		UpdatePlayerCamera(camera, player, mapWidthReal, mapHeightReal);
 		
 		// DRAWING ---
 
@@ -185,7 +235,6 @@ int main()
 		EndMode2D();
 
 		DrawFPS(screenWidth - 100, 10);
-
 		EndDrawing();
 	}
 
