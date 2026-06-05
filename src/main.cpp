@@ -6,6 +6,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 
 #define BLOCK_SIZE 32.0f
 #define SPEED BLOCK_SIZE * 8
@@ -16,7 +17,7 @@ float floatSign(float x) {
 	if (x < 0) return -1.0f;
 	return 0.0f;
 }
-typedef size_t u64;
+typedef int64_t i64;
 typedef std::vector<std::vector<int>> Map;
 
 struct Body {
@@ -53,9 +54,27 @@ void HandleInput(Body& playerBody, double dt) {
 	}
 }
 
-void MapDraw(Map &map) {	
-	for (u64 y = 0; y < map.size(); y++) {
-		for (u64 x = 0; x < map[y].size(); x++) {
+void MapDraw(Map &map, Camera2D& camera) {	
+	// Safety checks
+	i64 xToIndex = camera.target.x / BLOCK_SIZE;
+	i64 yToIndex = camera.target.y / BLOCK_SIZE;
+	i64 height = GetScreenHeight();
+	i64 width = GetScreenWidth();
+	height /= i64(BLOCK_SIZE);
+	width /= i64(BLOCK_SIZE);
+	
+	i64 blocksToLeft = (width / 2);
+	i64 blocksToRight = (width / 2);
+	i64 blocksToUp = (height / 2);
+	i64 blocksToDown = (height / 2);
+
+	i64 x0 = std::max(xToIndex - blocksToLeft, i64(0));
+	i64 x1 = std::min(xToIndex + blocksToRight, i64(map[0].size()));
+	i64 y0 = std::max(yToIndex - blocksToUp, i64(0));
+	i64 y1 = std::min(yToIndex + blocksToDown, i64(map.size()));
+
+	for (i64 y = y0; y < y1; y++) {
+		for (i64 x = x0; x < x1; x++) {
 			if (map[y][x] != 0) {
 				Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
 				DrawRectanglePro(blockRect, { 0, 0 }, 0, PURPLE);
@@ -66,26 +85,18 @@ void MapDraw(Map &map) {
 }
 
 void MapBlockCollide(Map &map, Body &player, double dt) {
-	/*
-		TODO: When map size increases i should make the loop only work for elements around the player
-		Especially if i want to store the entire map in one 2d array
-	*/
-
-	// Realistically we probobly only need to check like a 5x5 around teh player
-
-
 	// Safety checks
-	u64 xToIndex = player.position.x / BLOCK_SIZE;
-	u64 yToIndex = player.position.y / BLOCK_SIZE;
-	u64 x0 = std::max(xToIndex - COLLISION_RANGE, u64(0));
-	u64 x1 = std::min(xToIndex + COLLISION_RANGE, map[0].size());
-	u64 y0 = std::max(yToIndex - COLLISION_RANGE, u64(0));
-	u64 y1 = std::min(yToIndex + COLLISION_RANGE, map.size());
+	i64 xToIndex = player.position.x / BLOCK_SIZE;
+	i64 yToIndex = player.position.y / BLOCK_SIZE;
+	i64 x0 = std::max(xToIndex - COLLISION_RANGE, i64(0));
+	i64 x1 = std::min(xToIndex + COLLISION_RANGE, i64(map[0].size()));
+	i64 y0 = std::max(yToIndex - COLLISION_RANGE, i64(0));
+	i64 y1 = std::min(yToIndex + COLLISION_RANGE, i64(map.size()));
 
 	Rectangle playerRect = {player.position.x, player.position.y, player.size.x, player.size.y};
 	
-	for (u64 y = y0; y < y1; y++) {
-		for (u64 x = x0; x < x1; x++) {
+	for (i64 y = y0; y < y1; y++) {
+		for (i64 x = x0; x < x1; x++) {
 			if (map[y][x] == 0) continue;
 			
 			Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
@@ -107,8 +118,8 @@ void MapBlockCollide(Map &map, Body &player, double dt) {
 		}
 	}
 
-	for (u64 y = y0; y < y1; y++) {
-		for (u64 x = x0; x < x1; x++) {
+	for (i64 y = y0; y < y1; y++) {
+		for (i64 x = x0; x < x1; x++) {
 			if (map[y][x] == 0) continue;
 			
 			Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
@@ -132,7 +143,7 @@ void MapBlockCollide(Map &map, Body &player, double dt) {
 	}
 }
 
-void MapBorderCollide(Body& player, const u64 mapWidthReal, const u64 mapHeightReal, double dt) {
+void MapBorderCollide(Body& player, const i64 mapWidthReal, const i64 mapHeightReal, double dt) {
 	const float mapWidthFloat = float(mapWidthReal);
 	const float mapHeightFloat = float(mapHeightReal);
 
@@ -155,7 +166,7 @@ void MapBorderCollide(Body& player, const u64 mapWidthReal, const u64 mapHeightR
 	}
 }
 
-void UpdatePlayerCamera(Camera2D& camera, Body& player, const u64 mapWidthReal, const u64 mapHeightReal) {
+void UpdatePlayerCamera(Camera2D& camera, Body& player, const i64 mapWidthReal, const i64 mapHeightReal) {
 	const float mapWidthFloat = float(mapWidthReal);
 	const float mapHeightFloat = float(mapHeightReal);
 	
@@ -184,8 +195,8 @@ int main()
 {
 	// INITILIZATION ----------------------------------------------------
 
-	const u64 screenWidth = 1600;
-	const u64 screenHeight = 900;
+	const i64 screenWidth = 1600;
+	const i64 screenHeight = 900;
 	InitWindow(screenWidth, screenHeight, "2dGameThing");
 	SetTargetFPS(144);
 
@@ -194,8 +205,8 @@ int main()
 	player.prevPosition = player.position;
 	player.size = { BLOCK_SIZE, BLOCK_SIZE };
 
-	const u64 mapWidthReal = (screenWidth * 4);
-	const u64 mapHeightReal = (screenHeight * 2);
+	const i64 mapWidthReal = (screenWidth * 4);
+	const i64 mapHeightReal = (screenHeight * 2);
 
 	std::vector<std::vector<int>> map(mapHeightReal / BLOCK_SIZE, std::vector<int>(mapWidthReal / BLOCK_SIZE, 0));
 	for (int i = 10; i < 20; i++) {
@@ -234,7 +245,7 @@ int main()
 		BeginMode2D(camera);
 		{
 			DrawRectangleV(player.position, player.size, RED);			
-			MapDraw(map);
+			MapDraw(map, camera);
 		}
 		EndMode2D();
 
