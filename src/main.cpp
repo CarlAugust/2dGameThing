@@ -25,36 +25,6 @@ void HandleInput(Body& playerBody, double dt) {
 	}
 }
 
-void DrawWorldInCamera(World &world, Camera2D& camera) {	
-	// Safety checks
-	i64 xToIndex = camera.target.x / BLOCK_SIZE;
-	i64 yToIndex = camera.target.y / BLOCK_SIZE;
-	i64 screen_height = GetScreenHeight();
-	i64 screen_width = GetScreenWidth();
-	screen_height /= i64(BLOCK_SIZE);
-	screen_width /= i64(BLOCK_SIZE);
-	
-	i64 blocksToLeft = (screen_width / 2);
-	i64 blocksToRight = (screen_width / 2);
-	i64 blocksToUp = (screen_height / 2);
-	i64 blocksToDown = (screen_height / 2);
-
-	i64 x0 = std::max(xToIndex - blocksToLeft, i64(0));
-	i64 x1 = std::min(xToIndex + blocksToRight, i64(world.width));
-	i64 y0 = std::max(yToIndex - blocksToUp, i64(0));
-	i64 y1 = std::min(yToIndex + blocksToDown, i64(world.height));
-
-	for (i64 y = y0; y < y1; y++) {
-		for (i64 x = x0; x < x1; x++) {
-			if (world.data[y][x].type != BlockType::AIR) {
-				Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
-				DrawRectanglePro(blockRect, { 0, 0 }, 0, PURPLE);
-				DrawRectangleLinesEx(blockRect, 1, BLACK);
-			}
-		}
-	}
-}
-
 void UpdatePlayerCameraWithBorder(Camera2D& camera, World& world, Body& player) {
 	const float worldWidthFloat = static_cast<float>(world.realWidth);
 	const float worldHeightFloat = static_cast<float>(world.realHeight);
@@ -82,12 +52,18 @@ void UpdatePlayerCameraWithBorder(Camera2D& camera, World& world, Body& player) 
 
 int main()
 {
-	// INITILIZATION ----------------------------------------------------
+	// GLOBAL INITILIZATION ----------------------------------------------------
 
 	const i64 screenWidth = 1600;
 	const i64 screenHeight = 900;
 	InitWindow(screenWidth, screenHeight, "2dGameThing");
 	SetTargetFPS(144);
+
+	InitBlockRegister();
+
+	// ------
+
+	// Per world initilization
 
 	Body player;
 	player.position = { screenWidth / 2.0f, screenHeight / 2.0f };

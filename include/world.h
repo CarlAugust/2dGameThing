@@ -6,6 +6,9 @@
 enum class BlockType {
     AIR,
     DIRT,
+
+    // ----------------------------------
+    BLOCKCOUNT // IMPORTANT TO KEEP LAST
 };
 
 struct Block {
@@ -20,6 +23,9 @@ struct World {
     i64 realHeight = 0;
 };
 
+void InitBlockRegister();
+
 void WorldBorderBodyCollide(World &world, Body &body, double dt);
 void WorldBodyCollide(World &world, Body &body, double dt);
+void DrawWorldInCamera(World &world, Camera2D& camera);
 

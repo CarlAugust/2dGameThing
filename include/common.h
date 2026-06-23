@@ -17,6 +17,18 @@ static float floatSign(float x) {
 	return 0.0f;
 }
 
+static Texture2D LoadTextureSafe(const char* fileName) {
+    Image img = LoadImage(fileName);
+    if (img.width == 0 && img.height == 0) {
+        img = GenImageChecked(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE / 2, BLOCK_SIZE / 2, RED, BLACK);
+    }
+    
+    Texture2D tex = LoadTextureFromImage(img);
+    UnloadImage(img);
+
+    return tex;
+}
+
 struct Body {
 	Vector2 position = { 0,0 };
 	Vector2 prevPosition = { 0,0 };
