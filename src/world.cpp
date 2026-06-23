@@ -14,7 +14,7 @@ void registerBlock(BlockType t, std::string name) {
     u64 typeIndex = static_cast<u64>(t);
     blockRegister[typeIndex].name = name;
 
-    Texture2D tex = LoadTextureSafe(TextFormat("assets/textures/%s.png", name));
+    Texture2D tex = LoadTextureSafe(TextFormat("assets/textures/%s.png", name.data()));
     blockRegister[typeIndex].tex = tex;
 }
 
@@ -22,7 +22,7 @@ void InitBlockRegister() {
     registerBlock(BlockType::DIRT, "dirt");
 }
 
-Texture2D GetBlockTexture(BlockType t) {
+constexpr const Texture2D& GetBlockTexture(BlockType t) {
     u64 typeIndex = static_cast<u64>(t);
     return blockRegister[typeIndex].tex;
 }
@@ -51,7 +51,10 @@ void DrawWorldInCamera(World &world, Camera2D& camera) {
 			if (world.data[y][x].type == BlockType::AIR) continue;
 
 			Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE}; 
-            DrawTextureEx(GetBlockTexture(world.data[y][x].type), {x * BLOCK_SIZE, y * BLOCK_SIZE}, 0.0f, 1.0f, WHITE);
+            Texture2D tex = GetBlockTexture(world.data[y][x].type);
+
+            // Block size / tex.width is fine as long as long as width == block remains true
+            DrawTextureEx(tex, {x * BLOCK_SIZE, y * BLOCK_SIZE}, 0.0f, BLOCK_SIZE / tex.width, WHITE);
 		}
 	}
 }
