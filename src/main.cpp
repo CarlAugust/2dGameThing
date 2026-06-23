@@ -6,76 +6,47 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
-#include <cstdint>
 
-#define BLOCK_SIZE 32.0f
-#define SPEED BLOCK_SIZE * 8
-#define COLLISION_RANGE 4
-
-float floatSign(float x) {
-	if (x > 0) return 1.0f;
-	if (x < 0) return -1.0f;
-	return 0.0f;
-}
-typedef int64_t i64;
-typedef std::vector<std::vector<int>> Map;
-
-struct Body {
-	Vector2 position = { 0,0 };
-	Vector2 prevPosition = { 0,0 };
-	Vector2 velocity = { 0, 0 };
-	Vector2 size = { 0,0 };
-
-	void UpdatePosition(double dt) {
-		prevPosition = position;
-		position.x += velocity.x * dt;
-		position.y += velocity.y * dt;
-
-		const float drag = SPEED * 0.5f;		
-
-		velocity.x -= drag * floatSign(velocity.x) * dt;
-		velocity.y -= drag * floatSign(velocity.y) * dt;
-			
-	}
-};
+#include <common.h>
+#include <world.h>
 
 void HandleInput(Body& playerBody, double dt) {
 	if (IsKeyDown(KEY_W)) {
-		playerBody.velocity.y += -SPEED * dt;
+		playerBody.velocity.y += -BASE_SPEED * dt;
 	}
 	if (IsKeyDown(KEY_S)) {
-		playerBody.velocity.y += SPEED * dt;
+		playerBody.velocity.y += BASE_SPEED * dt;
 	}
 	if (IsKeyDown(KEY_A)) {
-		playerBody.velocity.x += -SPEED * dt;
+		playerBody.velocity.x += -BASE_SPEED * dt;
 	}
 	if (IsKeyDown(KEY_D)) {
-		playerBody.velocity.x += SPEED * dt;
+		playerBody.velocity.x += BASE_SPEED * dt;
 	}
 }
 
-void MapDraw(Map &map, Camera2D& camera) {	
+void DrawWorldInCamera(World &world, Camera2D& camera) {	
 	// Safety checks
 	i64 xToIndex = camera.target.x / BLOCK_SIZE;
 	i64 yToIndex = camera.target.y / BLOCK_SIZE;
-	i64 height = GetScreenHeight();
-	i64 width = GetScreenWidth();
-	height /= i64(BLOCK_SIZE);
-	width /= i64(BLOCK_SIZE);
+	i64 screen_height = GetScreenHeight();
+	i64 screen_width = GetScreenWidth();
+	screen_height /= i64(BLOCK_SIZE);
+	screen_width /= i64(BLOCK_SIZE);
 	
-	i64 blocksToLeft = (width / 2);
-	i64 blocksToRight = (width / 2);
-	i64 blocksToUp = (height / 2);
-	i64 blocksToDown = (height / 2);
+	i64 blocksToLeft = (screen_width / 2);
+	i64 blocksToRight = (screen_width / 2);
+	i64 blocksToUp = (screen_height / 2);
+	i64 blocksToDown = (screen_height / 2);
 
 	i64 x0 = std::max(xToIndex - blocksToLeft, i64(0));
-	i64 x1 = std::min(xToIndex + blocksToRight, i64(map[0].size()));
+	i64 x1 = std::min(xToIndex + blocksToRight, i64(world.width));
 	i64 y0 = std::max(yToIndex - blocksToUp, i64(0));
-	i64 y1 = std::min(yToIndex + blocksToDown, i64(map.size()));
+	i64 y1 = std::min(yToIndex + blocksToDown, i64(world.height));
 
 	for (i64 y = y0; y < y1; y++) {
 		for (i64 x = x0; x < x1; x++) {
-			if (map[y][x] != 0) {
+			if (world.data[y][x].type != BlockType::AIR) {
 				Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
 				DrawRectanglePro(blockRect, { 0, 0 }, 0, PURPLE);
 				DrawRectangleLinesEx(blockRect, 1, BLACK);
@@ -84,97 +55,15 @@ void MapDraw(Map &map, Camera2D& camera) {
 	}
 }
 
-void MapBlockCollide(Map &map, Body &player, double dt) {
-	// Safety checks
-	i64 xToIndex = player.position.x / BLOCK_SIZE;
-	i64 yToIndex = player.position.y / BLOCK_SIZE;
-	i64 x0 = std::max(xToIndex - COLLISION_RANGE, i64(0));
-	i64 x1 = std::min(xToIndex + COLLISION_RANGE, i64(map[0].size()));
-	i64 y0 = std::max(yToIndex - COLLISION_RANGE, i64(0));
-	i64 y1 = std::min(yToIndex + COLLISION_RANGE, i64(map.size()));
-
-	Rectangle playerRect = {player.position.x, player.position.y, player.size.x, player.size.y};
-	
-	for (i64 y = y0; y < y1; y++) {
-		for (i64 x = x0; x < x1; x++) {
-			if (map[y][x] == 0) continue;
-			
-			Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
-			Rectangle playerRectTemp = playerRect;
-
-			// Test x direction
-			playerRectTemp.x += player.velocity.x * dt;
-			bool collideX = CheckCollisionRecs(blockRect, playerRectTemp);
-			if (collideX) {
-				playerRectTemp.x -= player.velocity.x * dt;
-				if (player.velocity.x < 0.0f) {
-					player.position.x = blockRect.x + blockRect.width;
-				}
-				else {
-					player.position.x = blockRect.x - player.size.x;
-				}
-				player.velocity.x = 0.0f;
-			}
-		}
-	}
-
-	for (i64 y = y0; y < y1; y++) {
-		for (i64 x = x0; x < x1; x++) {
-			if (map[y][x] == 0) continue;
-			
-			Rectangle blockRect = {x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE};
-			Rectangle playerRectTemp = playerRect;
-
-			// Test y direction
-			playerRectTemp.y += player.velocity.y * dt;
-			bool collideY = CheckCollisionRecs(blockRect, playerRectTemp);
-			if (collideY) {
-				playerRectTemp.y -= player.velocity.y * dt;
-				if (player.velocity.y < 0.0f) {
-					player.position.y = blockRect.y + blockRect.height;
-				}
-				else {
-					player.position.y = blockRect.y - player.size.y;
-				}
-
-				player.velocity.y = 0.0f;
-			}
-		}
-	}
-}
-
-void MapBorderCollide(Body& player, const i64 mapWidthReal, const i64 mapHeightReal, double dt) {
-	const float mapWidthFloat = float(mapWidthReal);
-	const float mapHeightFloat = float(mapHeightReal);
-
-	if (player.position.x + player.velocity.x * dt < 0.0f) {
-		player.position.x = 0.0f;
-		player.velocity.x = 0.0f;
-	}
-	else if (player.position.x + player.size.x + player.velocity.x * dt > mapWidthFloat) {
-		player.position.x = mapWidthFloat - player.size.x;
-		player.velocity.x = 0.0f;
-	}
-
-	if (player.position.y + player.velocity.y * dt < 0.0f) {
-		player.position.y = 0.0f;
-		player.velocity.y = 0.0f;
-	}
-	else if (player.position.y + player.size.y + player.velocity.y * dt > mapHeightFloat) {
-		player.position.y = mapHeightFloat - player.size.y;
-		player.velocity.y = 0.0f;
-	}
-}
-
-void UpdatePlayerCamera(Camera2D& camera, Body& player, const i64 mapWidthReal, const i64 mapHeightReal) {
-	const float mapWidthFloat = float(mapWidthReal);
-	const float mapHeightFloat = float(mapHeightReal);
+void UpdatePlayerCameraWithBorder(Camera2D& camera, World& world, Body& player) {
+	const float worldWidthFloat = static_cast<float>(world.realWidth);
+	const float worldHeightFloat = static_cast<float>(world.realHeight);
 	
 	if (player.position.x - camera.offset.x < 0) {
 		camera.target.x = camera.offset.x;
 	}
-	else if (player.position.x + camera.offset.x > mapWidthFloat) {
-		camera.target.x = mapWidthFloat - camera.offset.x;
+	else if (player.position.x + camera.offset.x > worldWidthFloat) {
+		camera.target.x = worldWidthFloat - camera.offset.x;
 	}
 	else {
 		camera.target.x = player.position.x;
@@ -183,8 +72,8 @@ void UpdatePlayerCamera(Camera2D& camera, Body& player, const i64 mapWidthReal, 
 	if (player.position.y - camera.offset.y < 0) {
 		camera.target.y = camera.offset.y;
 	}
-	else if (player.position.y + camera.offset.y > mapHeightFloat) {
-		camera.target.y = mapHeightFloat - camera.offset.y;
+	else if (player.position.y + camera.offset.y > worldHeightFloat) {
+		camera.target.y = worldHeightFloat - camera.offset.y;
 	}
 	else {
 		camera.target.y = player.position.y;
@@ -205,13 +94,18 @@ int main()
 	player.prevPosition = player.position;
 	player.size = { BLOCK_SIZE, BLOCK_SIZE };
 
-	const i64 mapWidthReal = (screenWidth * 4);
-	const i64 mapHeightReal = (screenHeight * 2);
 
-	std::vector<std::vector<int>> map(mapHeightReal / BLOCK_SIZE, std::vector<int>(mapWidthReal / BLOCK_SIZE, 0));
+	World world;
+	world.realWidth = (screenWidth * 4);
+	world.realHeight = (screenHeight * 2);
+	world.width = world.realWidth / BLOCK_SIZE;
+	world.height = world.realHeight / BLOCK_SIZE;
+
+	world.data.assign(world.height, std::vector(world.height, Block{BlockType::AIR}));
+
 	for (int i = 10; i < 20; i++) {
 		for (int j = 10; j < 20; j++) {
-			map[i][j] = 1;
+			world.data[i][j] = Block{BlockType::DIRT};
 		}
 	}
 
@@ -230,11 +124,11 @@ int main()
 		// GAME EVENTS
 
 		HandleInput(player, dt);
-		MapBlockCollide(map, player, dt);
-		MapBorderCollide(player, mapWidthReal, mapHeightReal, dt);
+		WorldBodyCollide(world, player, dt);
+		WorldBorderBodyCollide(world, player, dt);
 		player.UpdatePosition(dt);		
 
-		UpdatePlayerCamera(camera, player, mapWidthReal, mapHeightReal);
+		UpdatePlayerCameraWithBorder(camera, world, player);
 		
 		// DRAWING ---
 
@@ -245,7 +139,7 @@ int main()
 		BeginMode2D(camera);
 		{
 			DrawRectangleV(player.position, player.size, RED);			
-			MapDraw(map, camera);
+			DrawWorldInCamera(world, camera);
 		}
 		EndMode2D();
 
