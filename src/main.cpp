@@ -73,26 +73,16 @@ int main()
 	player.prevPosition = player.position;
 	player.size = { BLOCK_SIZE, BLOCK_SIZE };
 
-
-	World world;
-	world.realWidth = (screenWidth * 4);
-	world.realHeight = (screenHeight * 2);
-	world.width = world.realWidth / BLOCK_SIZE;
-	world.height = world.realHeight / BLOCK_SIZE;
-
-	world.data.assign(world.height, std::vector(world.height, Block{BlockType::AIR}));
-
-	for (int i = 10; i < 20; i++) {
-		for (int j = 10; j < 20; j++) {
-			world.data[i][j] = Block{BlockType::DIRT};
-		}
-	}
+	World world = GenerateWorld(100, 100, 1000);
 
 	Camera2D camera;
 	camera.target = { player.position.x + player.size.x / 2, player.position.y + player.size.y / 2 };
 	camera.offset = { screenWidth / 2, screenHeight / 2 };
 	camera.rotation = 0.0f;
 	camera.zoom = 1.0f;
+
+	// GOD MODE
+	bool godModeOn = false;
 
 	// MAIN LOOP ----------------------------------------------------
 
@@ -102,8 +92,13 @@ int main()
 
 		// GAME EVENTS
 
+
+		if (IsKeyDown(KEY_Q)) godModeOn = !godModeOn;
+		
 		HandleInput(player, dt);
-		WorldBodyCollide(world, player, dt);
+
+
+		if (!godModeOn) WorldBodyCollide(world, player, dt);
 		WorldBorderBodyCollide(world, player, dt);
 		player.UpdatePosition(dt);		
 

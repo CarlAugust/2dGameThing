@@ -11,12 +11,12 @@ enum class BlockType {
     BLOCKCOUNT // IMPORTANT TO KEEP LAST
 };
 
-struct Block {
+struct BlockData {
     BlockType type;
 };
 
 struct World {
-    std::vector<std::vector<Block>> data;
+    std::vector<std::vector<BlockData>> data;
     i64 width = 0;
     i64 height = 0;
     i64 realWidth = 0;
@@ -29,3 +29,4 @@ void WorldBorderBodyCollide(World &world, Body &body, double dt);
 void WorldBodyCollide(World &world, Body &body, double dt);
 void DrawWorldInCamera(World &world, Camera2D& camera);
 
+World GenerateWorld(u64 width, u64 height, u64 seed);
