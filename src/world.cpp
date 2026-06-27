@@ -8,23 +8,29 @@ struct BlockData {
     Texture2D tex;
 };
 
-BlockData blockRegister[static_cast<u64>(BlockType::BLOCKCOUNT)];
+BlockData blockMetaDataRegistry[static_cast<u64>(BlockType::BLOCKCOUNT)];
 
 void registerBlock(BlockType t, std::string name) {
     u64 typeIndex = static_cast<u64>(t);
-    blockRegister[typeIndex].name = name;
+    blockMetaDataRegistry[typeIndex].name = name;
 
     Texture2D tex = LoadTextureSafe(TextFormat("assets/textures/%s.png", name.data()));
-    blockRegister[typeIndex].tex = tex;
+    blockMetaDataRegistry[typeIndex].tex = tex;
 }
 
+/*
+	string name will be the name of the texture file that is searched for excluding .png
+*/
 void InitBlockRegister() {
     registerBlock(BlockType::DIRT, "dirt");
 }
 
+constexpr const BlockData& GetBlockData(BlockType t) {
+    return blockMetaDataRegistry[static_cast<u64>(t)];
+}
+
 constexpr const Texture2D& GetBlockTexture(BlockType t) {
-    u64 typeIndex = static_cast<u64>(t);
-    return blockRegister[typeIndex].tex;
+    return blockMetaDataRegistry[static_cast<u64>(t)].tex;
 }
 
 void DrawWorldInCamera(World &world, Camera2D& camera) {	
