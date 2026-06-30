@@ -12,17 +12,20 @@
 #include <world.h>
 
 void HandleInput(Body& playerBody, double dt) {
-	if (IsKeyDown(KEY_W)) {
-		playerBody.velocity.y += -BASE_SPEED * dt;
-	}
-	if (IsKeyDown(KEY_S)) {
-		playerBody.velocity.y += BASE_SPEED * dt;
+	float speed = 3200.0f;
+	if (IsKeyDown(KEY_D)) {
+		playerBody.UpdateVelocity(speed * dt, 0);
 	}
 	if (IsKeyDown(KEY_A)) {
-		playerBody.velocity.x += -BASE_SPEED * dt;
+		playerBody.UpdateVelocity(-speed * dt, 0);
 	}
-	if (IsKeyDown(KEY_D)) {
-		playerBody.velocity.x += BASE_SPEED * dt;
+	if (IsKeyDown(KEY_W)) {
+		// Flying
+		playerBody.UpdateVelocity(0, -speed * 1.5 * dt);
+	}
+	if (IsKeyDown(KEY_S)) {
+		// Fall faster when holding down added to gravity
+		playerBody.UpdateVelocity(0, speed * 0.5 * dt);
 	}
 }
 
@@ -72,6 +75,7 @@ int main()
 	player.position = { screenWidth / 2.0f, screenHeight / 2.0f };
 	player.prevPosition = player.position;
 	player.size = { BLOCK_SIZE, BLOCK_SIZE };
+	player.maxVelocity = {2000.0f, 2000.0f};
 
 	World world = GenerateWorld(100, 100, 1000);
 
@@ -93,10 +97,8 @@ int main()
 		// GAME EVENTS
 
 
-		if (IsKeyDown(KEY_Q)) godModeOn = !godModeOn;
-		
+		if (IsKeyDown(KEY_Q)) godModeOn = !godModeOn;		
 		HandleInput(player, dt);
-
 
 		if (!godModeOn) WorldBodyCollide(world, player, dt);
 		WorldBorderBodyCollide(world, player, dt);
@@ -118,7 +120,11 @@ int main()
 		EndMode2D();
 
 		DrawFPS(screenWidth - 100, 10);
+		DrawText(TextFormat("x: %f y: %f", player.position.x, player.position.y), 0, 0, 20, RED);
+		DrawText(TextFormat("x: %f y: %f", player.velocity.x, player.velocity.y), 0, 30, 20, RED);
+
 		EndDrawing();
+
 	}
 
 	return 0;
